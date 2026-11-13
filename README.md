@@ -85,8 +85,9 @@ them using `mise run install:dependencies`
   - Run `changie` to create the changelog
   - Tag the code with the new version number
 - If you are satisfied with the release, push `main` and the tag to GitHub
-  together, where a workflow tests the code and uploads the distribution to
-  [PAUSE](https://pause.perl.org/). The workflow needs the repository secrets
+  together, where a workflow tests the code, uploads the distribution to
+  [PAUSE](https://pause.perl.org/) and creates a GitHub release with the
+  changelog of the version. The workflow needs the repository secrets
   `PAUSE_USER` and `PAUSE_PASSWORD`, and only releases tags that are on `main`.
 
   ```sh

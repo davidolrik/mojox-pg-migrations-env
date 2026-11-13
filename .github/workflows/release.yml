@@ -10,8 +10,11 @@ permissions:
 
 jobs:
   release:
-    name: upload to PAUSE
+    name: upload to PAUSE and create the GitHub release
     runs-on: ubuntu-latest
+    # Creating the GitHub release needs write access to the repository contents
+    permissions:
+      contents: write
     services:
       postgres:
         image: postgres:16
@@ -46,6 +49,13 @@ jobs:
             echo "Tag $GITHUB_REF_NAME does not match module version $version" >&2
             exit 1
           fi
+      # Checked up front, so a tag without release notes fails before anything is uploaded
+      - name: Check that the tag has release notes
+        run: |
+          if [ ! -s ".changes/$GITHUB_REF_NAME.md" ]; then
+            echo "Tag $GITHUB_REF_NAME has no release notes in .changes/$GITHUB_REF_NAME.md" >&2
+            exit 1
+          fi
       # DBD::Pg is built against the libpq headers
       - name: Install libpq headers
         run: sudo apt-get update && sudo apt-get install --yes libpq-dev
@@ -72,3 +82,10 @@ jobs:
           umask 077
           printf 'user %s\npassword %s\n' "$PAUSE_USER" "$PAUSE_PASSWORD" > "$HOME/.pause"
           cpan-upload MojoX-Pg-Migrations-Env-*.tar.gz
+      # The notes are the changelog of this version without its heading, which the release title replaces
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sed '1{/^## /d;}' ".changes/$GITHUB_REF_NAME.md" > release-notes.md
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md MojoX-Pg-Migrations-Env-*.tar.gz
