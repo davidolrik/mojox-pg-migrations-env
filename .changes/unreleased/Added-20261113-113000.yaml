@@ -1,0 +1,3 @@
+kind: Added
+body: MojoX::Pg::Migrations::Env, a drop-in Mojo::Pg::Migrations subclass that replaces ${NAME} and ${NAME:-fallback} placeholders in migration sql from the environment
+time: 2026-11-13T11:30:00.000000+01:00

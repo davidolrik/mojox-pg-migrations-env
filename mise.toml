@@ -1,0 +1,95 @@
+# Don't edit this file if the changes only applies to your environment
+# Instead create a mise.local.toml and put your changes in there, they will override what is in this file
+# This also works for the other mise toml files - e.g. For mise.dev.toml create mise.dev.local.toml
+[hooks]
+# Setup git pre-commit hook
+postinstall = """
+git config --unset-all core.hooksPath || true
+rm -f "$(git rev-parse --git-path hooks)"/pre-commit*
+prek install
+"""
+
+[env]
+# Run the author tests (manifest, perltidy), which are skipped without it
+AUTHOR_TESTING = '1'
+# Database used by the tests, override in mise.local.toml. Tests create and drop the schema named in search_path.
+TEST_ONLINE = 'postgresql://localhost/postgres?search_path=mojox_pg_migrations_env_test'
+_.path = ['{{config_root}}/local/bin']
+PERL5LIB = '{{config_root}}/local/lib/perl5:{{config_root}}/lib'
+
+[tools]
+changie = "latest"
+perl = "5.42.3"
+usage = "latest"
+prek = "latest"
+
+[plugins]
+perl = "https://github.com/ouest/asdf-perl.git#v0.4.0"
+
+[tasks.help]
+alias = "default"
+raw = true
+description = "You are looking at it 😎"
+run = '''# mise tasks --local
+echo "MojoX::Pg::Migrations::Env"
+echo ""
+mise tasks --local
+'''
+
+[tasks."install:dependencies"]
+description = "Install module dependencies in local"
+run = "cpm install"
+
+[tasks."prepare"]
+description = "Create Makefile and build the code"
+run = ["perl Makefile.PL", "make", "make manifest"]
+
+[tasks."test"]
+description = "Run prove to test the code"
+wait_for = "prepare"
+run = ["prove"]
+
+[tasks."release:preview"]
+description = "Prepare next release"
+usage = '''
+flag "--next <next>" default="auto" help="Version bump: auto, major, minor, patch, or explicit version"
+'''
+run = '''# Prepare next release
+    export NEXT_VERSION=$(changie next "$usage_next")
+    echo "\nNext version will be $NEXT_VERSION\n"
+    changie batch $NEXT_VERSION --dry-run
+'''
+
+[tasks."release:create"]
+description = "Create actual release"
+usage = '''
+flag "--next <next>" default="auto" help="Version bump: auto, major, minor, patch, or explicit version"
+'''
+run = '''# Create actual release
+    GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    case "$GIT_BRANCH" in
+        master|main)
+            ;;
+        *)
+            echo ""
+            echo "ERROR: Not a release branch"
+            echo "       Please run this only in the master/main branch"
+            echo ""
+            exit 2
+            ;;
+    esac
+    GIT_STATUS=$(git status --short)
+    if [[ -n "${GIT_STATUS}" ]]; then
+        echo ""
+        echo "ERROR: Unclean working directory"
+        echo "       Please commit your changes before trying to create a new release"
+        echo ""
+        exit 2
+    fi
+    export NEXT_VERSION=$(changie next "$usage_next")
+    changie batch $NEXT_VERSION
+    changie merge
+    git add .
+    git commit -m "chore: Release version ${NEXT_VERSION}"
+    git tag --annotate "$NEXT_VERSION" --message "Release version ${NEXT_VERSION}"
+'''

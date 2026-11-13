@@ -1,0 +1,51 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: perl ${{ matrix.perl }}${{ matrix.author && ' with author tests' || '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        perl: ["5.20", "5.24", "5.30", "5.36", "5.40", "5.42"]
+        author: [false]
+        include:
+          # The newest perl also runs the author tests, the others test what an install from CPAN gets
+          - perl: "5.44"
+            author: true
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_ONLINE: postgresql://postgres:postgres@localhost:5432/postgres?search_path=mojox_pg_migrations_env_test
+    steps:
+      - uses: actions/checkout@v7
+      # DBD::Pg is built against the libpq headers
+      - name: Install libpq headers
+        run: sudo apt-get update && sudo apt-get install --yes libpq-dev
+      - uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: ${{ matrix.perl }}
+          install-modules-with: cpanm
+          install-modules-args: --with-configure ${{ matrix.author && '--with-develop' || '' }}
+      - run: perl Makefile.PL
+      - name: Run the tests
+        run: make test
+        env:
+          AUTHOR_TESTING: ${{ matrix.author && '1' || '' }}

@@ -1,0 +1,34 @@
+changesDir: .changes
+unreleasedDir: unreleased
+headerPath: header.tpl.md
+changelogPath: CHANGELOG.md
+versionExt: md
+versionFormat: '## [{{.Version}}] - {{.Time.Format "2006-01-02"}}'
+kindFormat: '### {{.Kind}}'
+changeFormat: '- {{.Body}}'
+kinds:
+    - label: Added
+      auto: minor
+    - label: Changed
+      auto: minor
+    - label: Deprecated
+      auto: minor
+    - label: Removed
+      auto: minor
+    - label: Fixed
+      auto: patch
+    - label: Security
+      auto: patch
+    - label: Build
+      auto: patch
+newlines:
+    beforeKind: 1
+    afterKind: 1
+    beforeChangelogVersion: 1
+    afterChangelogVersion: 0
+    afterReleaseNotes: 1
+envPrefix: CHANGIE_
+replacements:
+  - path: lib/MojoX/Pg/Migrations/Env.pm
+    find: "our \\$VERSION = '[^']+';"
+    replace: "our $$VERSION = '{{ .VersionNoPrefix }}';"

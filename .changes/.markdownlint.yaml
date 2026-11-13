@@ -1,0 +1,3 @@
+MD013: false # Ignore long lines
+MD041: false # First line in a file should be a top-level heading
+MD024: false # no-duplicate-heading
