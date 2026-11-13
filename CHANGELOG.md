@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [v0.2.0] - 2026-11-13
+
+### Added
+
+- label_for method that a subclass can override to decide how a migration is named in error messages
+
 ## [v0.1.0] - 2026-11-13
 
 ### Added
