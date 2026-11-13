@@ -13,6 +13,9 @@ has env => sub { \%ENV };
 # ${NAME}, ${NAME:-fallback} and the escaped form $${NAME} which is left alone
 my $PLACEHOLDER = qr/\$(\$?)\{([A-Za-z_]\w*)(?::-([^}]*))?\}/;
 
+# How a migration is named in error messages, a subclass can add what it knows about the migration
+sub label_for ( $self, $version ) { return "Migration $version" }
+
 # Placeholders used by a migration, in order of first appearance, as {name, fallback}
 sub placeholders ( $self, $version )
 {
@@ -63,8 +66,8 @@ sub _unescape ( $name, $fallback )
 sub _value ( $self, $name, $fallback, $version )
 {
     my ( $source, $value ) = $self->resolve( $name, $fallback );
-    croak "Migration $version needs environment variable $name, which is not set and has no fallback" if $source eq 'missing';
-    return $value;
+    return $value unless $source eq 'missing';
+    croak $self->label_for($version) . " needs environment variable $name, which is not set and has no fallback";
 }
 
 1;
@@ -163,6 +166,21 @@ Variables that placeholders are looked up in, defaults to C<%ENV>.
 L<MojoX::Pg::Migrations::Env> inherits all methods from L<Mojo::Pg::Migrations> and implements the
 following new ones.
 
+=head2 label_for
+
+  my $label = $migrations->label_for(3);
+
+How a migration is named in error messages, defaults to C<Migration 3>. It is only called when an error is
+raised. A subclass that knows more about its migrations than their version can override it, and the label
+becomes the subject of the error.
+
+  package My::Migrations;
+  use Mojo::Base 'MojoX::Pg::Migrations::Env', -signatures;
+
+  sub label_for ($self, $version) { "Migration $version (" . $self->title_of($version) . ')' }
+
+  # Migration 3 (add readonly grants) needs environment variable APP_READONLY_ROLE, which is not ...
+
 =head2 placeholders
 
   my $placeholders = $migrations->placeholders(3);
@@ -199,7 +217,7 @@ L</"env"> has no value for the name, or an empty one, and there is no fallback. 
   my $sql = $migrations->sql_for(5, 10);
 
 Same as L<Mojo::Pg::Migrations/"sql_for">, with the placeholders of every migration on the way replaced.
-Dies when a variable is missing, naming the migration that needs it.
+Dies when a variable is missing, naming the migration that needs it with L</"label_for">.
 
   Migration 3 needs environment variable APP_READONLY_ROLE, which is not set and has no fallback
 

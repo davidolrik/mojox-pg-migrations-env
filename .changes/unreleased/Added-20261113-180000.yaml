@@ -1,0 +1,3 @@
+kind: Added
+body: label_for method that a subclass can override to decide how a migration is named in error messages
+time: 2026-11-13T18:00:00.000000+01:00

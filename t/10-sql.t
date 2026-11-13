@@ -9,6 +9,21 @@ use Mojo::Pg::Migrations;
 
 use MojoX::Pg::Migrations::Env;
 
+# A subclass that knows more about its migrations than their version, and counts how often it is asked
+package Local::Migrations::Labelled {
+    use Mojo::Base 'MojoX::Pg::Migrations::Env', -signatures;
+
+    has asked => 0;
+
+    sub label_for ( $self, $version )
+    {
+        $self->asked( $self->asked + 1 );
+        return "Migration $version (needs-env-$version)";
+    }
+
+    sub sql_for ( $self, $from, $to ) { return $self->SUPER::sql_for( $from, $to ) }
+}
+
 my $fixtures = path('t/fixtures');
 
 sub load ( $file, %env )
@@ -123,6 +138,24 @@ subtest 'placeholders are replaced per migration' => sub {
       'missing variable on the way down dies';
     like dies { load( 'placeholders.sql', ENV_TEST_WHO => '' )->sql_for( 1, 2 ) }, qr/^Migration 2 needs environment variable/,
       'empty variable without a fallback dies';
+};
+
+subtest 'label_for' => sub {
+    my $m = load('placeholders.sql');
+    is $m->label_for(4), 'Migration 4', 'a migration is named by its version';
+
+    my $file = $fixtures->child('placeholders.sql');
+    $m = Local::Migrations::Labelled->new( name => 'test', env => { ENV_TEST_WHO => 'bob' } )->from_file($file);
+    like $m->sql_for( 0, 2 ), qr/up 1 as bob.*up 2 for bob/s, 'sql is produced by a subclass with its own label';
+    is $m->asked, 0, 'the label is not asked for when nothing is missing';
+
+    $m->env( {} );
+    like dies { $m->sql_for( 0, 2 ) },
+      qr/^Migration 2 \(needs-env-2\) needs environment variable ENV_TEST_WHO, which is not set and has no fallback at \Q${\__FILE__}\E line/,
+      'the label of a subclass is in the error, which still blames the caller';
+    is $m->asked, 1, 'the label is asked for once, for the migration that fails';
+    like dies { $m->sql_for( 2, 1 ) }, qr/^Migration 2 \(needs-env-2\) needs environment variable ENV_TEST_WHO/,
+      'the label is used on the way down too';
 };
 
 subtest 'placeholders' => sub {
