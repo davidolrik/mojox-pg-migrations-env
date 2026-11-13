@@ -1,3 +1,0 @@
-kind: Build
-body: Require Mojo::Pg 4.04 and Mojolicious 7.51, run the manifest and perltidy tests only with AUTHOR_TESTING, and test and release to PAUSE with GitHub Actions
-time: 2026-11-13T16:00:00.000000+01:00

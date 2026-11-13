@@ -5,7 +5,7 @@ use Mojo::Base 'Mojo::Pg::Migrations', -signatures;
 use Carp qw(croak);
 
 # This will be changed automatically when running `mise run create:release`
-our $VERSION = '0.0.1';
+our $VERSION = '0.1.0';
 
 # Variables looked up by ${NAME} and ${NAME:-fallback} placeholders in migration sql
 has env => sub { \%ENV };
